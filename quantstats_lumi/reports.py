@@ -133,7 +133,7 @@ def html(
     if isinstance(returns, _pd.Series):
         returns.name = strategy_title
     elif isinstance(returns, _pd.DataFrame):
-        returns.columns = strategy_title
+        returns.columns = [strategy_title]
 
     mtrx = metrics(
         returns=returns,
@@ -1547,7 +1547,7 @@ def _calc_dd(df, display=True, as_pct=False):
 
     if (
         any(ret_dd.columns.get_level_values(0).str.contains("returns"))
-        and ret_dd.columns.get_level_values(0).nunique() > 1
+        and ret_dd.columns.get_level_values(0).nunique() > 0
     ):
         dd_stats = {
             col: {
@@ -1636,7 +1636,9 @@ def _download_html(html, filename="quantstats-tearsheet.html"):
     a.download="{{filename}}";
     a.hidden=true;document.body.appendChild(a);
     a.innerHTML="download report";
-    a.click();</script>""".replace("\n", ""),
+    a.click();</script>""".replace(
+            "\n", ""
+        ),
     )
     jscode = jscode.replace("{{html}}", _regex.sub(" +", " ", html.replace("\n", "")))
     if _utils._in_notebook():
@@ -1650,7 +1652,9 @@ def _open_html(html):
         " ",
         """<script>
     var win=window.open();win.document.body.innerHTML='{{html}}';
-    </script>""".replace("\n", ""),
+    </script>""".replace(
+            "\n", ""
+        ),
     )
     jscode = jscode.replace("{{html}}", _regex.sub(" +", " ", html.replace("\n", "")))
     if _utils._in_notebook():

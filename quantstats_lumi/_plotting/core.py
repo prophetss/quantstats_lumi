@@ -1006,16 +1006,20 @@ def plot_distribution(
     apply_fnc = _stats.comp if compounded else _np.sum
 
     port["Weekly"] = port["Daily"].resample("W-MON").apply(apply_fnc)
+    # resampled.index = [port.index.asof(x) for x in resampled.index]   # 周数据如果连续一周没有交易会造成重复索引
     port["Weekly"] = port["Weekly"].ffill()
 
-    port["Monthly"] = port["Daily"].resample("ME").apply(apply_fnc)
-    port["Monthly"] = port["Monthly"].ffill()
+    resampled = port["Daily"].resample("ME").apply(apply_fnc)
+    resampled.index = [port.index.asof(x) for x in resampled.index]
+    port["Monthly"] = resampled.ffill()
 
-    port["Quarterly"] = port["Daily"].resample("QE").apply(apply_fnc)
-    port["Quarterly"] = port["Quarterly"].ffill()
+    resampled = port["Daily"].resample("QE").apply(apply_fnc)
+    resampled.index = [port.index.asof(x) for x in resampled.index]
+    port["Quarterly"] = resampled.ffill()
 
-    port["Yearly"] = port["Daily"].resample("YE").apply(apply_fnc)
-    port["Yearly"] = port["Yearly"].ffill()
+    resampled = port["Daily"].resample("YE").apply(apply_fnc)
+    resampled.index = [port.index.asof(x) for x in resampled.index]
+    port["Yearly"] = resampled.ffill()
 
     fig, ax = _plt.subplots(figsize=figsize)
     ax.spines["top"].set_visible(False)
