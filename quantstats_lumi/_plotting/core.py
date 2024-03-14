@@ -776,6 +776,8 @@ def plot_rolling_beta(
             for col in returns.columns
         }
         for name, b in beta.items():
+            if isinstance(name, tuple):
+                name = ",".join(name)
             ax.plot(b, lw=lw, label=name + " " + f"({window1_label})", color=colors[i])
             i += 1
 
