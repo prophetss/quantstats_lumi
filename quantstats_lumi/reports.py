@@ -63,20 +63,56 @@ def _match_dates(returns, benchmark):
 
 def html(
     returns,
-    benchmark=None,
-    rf=0.0,
-    grayscale=False,
-    title="Strategy Tearsheet",
-    output=None,
-    compounded=True,
-    periods_per_year=365,
-    download_filename="quantstats-tearsheet.html",
-    figfmt="svg",
-    template_path=None,
-    match_dates=True,
+    benchmark: _pd.Series = None,
+    rf: float = 0.0,
+    grayscale: bool = False,
+    title: str = "Strategy Tearsheet",
+    output: str = None,
+    compounded: bool = True,
+    periods_per_year: int = 365,
+    download_filename: str = "tearsheet.html",
+    figfmt: str = "svg",
+    template_path: str = None,
+    match_dates: bool = True,
+    parameters: dict = None,
     **kwargs,
 ):
-    """generates full HTML tear sheet report"""
+    """
+    Generates a full HTML tearsheet with performance metrics and plots
+
+    Parameters
+    ----------
+    returns : pd.Series, pd.DataFrame
+        Strategy returns
+    benchmark : pd.Series, optional
+        Benchmark returns
+    rf : float, optional
+        Risk-free rate, default is 0
+    grayscale : bool, optional
+        Plot in grayscale, default is False
+    title : str, optional
+        Title of the HTML report, default is "Strategy Tearsheet"
+    output : str, optional
+        Output file path
+    compounded : bool, optional
+        Whether to use compounded returns, default is True
+    periods_per_year : int, optional
+        Trading periods per year, default is 365
+    download_filename : str, optional
+        Download filename, default is "tearsheet.html"
+    figfmt : str, optional
+        Figure format, default is "svg"
+    template_path : str, optional
+        Custom template path
+    match_dates : bool, optional
+        Match dates of returns and benchmark, default is True
+    parameters : dict, optional
+        Strategy parameters
+
+    Returns
+    -------
+    None
+    """
 
     if output is None and not _utils._in_notebook():
         raise ValueError("`output` must be specified")
@@ -166,6 +202,9 @@ def html(
     tpl = tpl.replace(
         "<tr><td></td><td></td></tr>", '<tr><td colspan="2"><hr></td></tr>'
     )
+
+    if parameters is not None:
+        tpl = tpl.replace("{{parameters_section}}", parameters_section(parameters))
 
     if benchmark is not None:
         yoy = _stats.compare(
@@ -739,6 +778,32 @@ def basic(
         active=active,
     )
 
+def parameters_section(parameters):
+    """returns a formatted section for strategy parameters"""
+    if parameters is None:
+        return ""
+
+    tpl = """
+    <div id="params">
+        <h3>Parameters Used</h3>
+        <table style="width:100%; font-size: 12px">
+    """
+
+    # Add titles to the table
+    tpl += "<thead><tr><th>Parameter</th><th>Value</th></tr></thead>"
+
+    for key, value in parameters.items():
+        # Make sure that the value is something that can be displayed
+        if not isinstance(value, (int, float, str)):
+            value = str(value)
+            
+        tpl += f"<tr><td>{key}</td><td>{value}</td></tr>"
+    tpl += """
+        </table>
+    </div>
+    """
+
+    return tpl
 
 def metrics(
     returns,
@@ -844,24 +909,25 @@ def metrics(
     metrics = _pd.DataFrame()
     metrics["Start Period"] = _pd.Series(s_start)
     metrics["End Period"] = _pd.Series(s_end)
-    metrics["Risk-Free Rate %"] = _pd.Series(s_rf) * 100
-    metrics["Time in Market %"] = _stats.exposure(df, prepare_returns=False) * pct
+    metrics["Risk-Free Rate % "] = _pd.Series(s_rf) * 100
+    metrics["Time in Market % "] = _stats.exposure(df, prepare_returns=False) * pct
 
     metrics["~"] = blank
 
     if compounded:
-        metrics["Total Return %"] = (_stats.comp(df) * pct).map("{:,.2f}".format)
+        metrics["Total Return % "] = (_stats.comp(df) * pct).map("{:,.2f}".format)
     else:
-        metrics["Total Return %"] = (df.sum() * pct).map("{:,.2f}".format)
+        metrics["Total Return % "] = (df.sum() * pct).map("{:,.2f}".format)
 
-    metrics["CAGR﹪% (Annual Return)"] = _stats.cagr(df, rf, compounded, win_year) * pct
+    metrics["CAGR% (Annual Return) "] = _stats.cagr(df, rf, compounded, win_year) * pct
 
     metrics["~~~~~~~~~~~~~~"] = blank
 
     metrics["Sharpe"] = _stats.sharpe(df, rf, win_year, True)
     metrics["ROMaD"] = _stats.romad(df, win_year, True)
-    # def benchmark_correlation(returns, benchmark, prepare_returns=True)
-    metrics["Corr to Benchmark"] = _stats.benchmark_correlation(df, benchmark, True)
+    
+    if benchmark is not None:
+        metrics["Corr to Benchmark "] = _stats.benchmark_correlation(df, benchmark, True)
     metrics["Prob. Sharpe Ratio %"] = (
         _stats.probabilistic_sharpe_ratio(df, rf, win_year, False) * pct
     )
@@ -993,7 +1059,7 @@ def metrics(
 
     # returns
     metrics["~~"] = blank
-    comp_func = _stats.comp if compounded else _np.sum
+    comp_func = _stats.comp if compounded else lambda x: _np.sum(x, axis=0)
 
     today = df.index[-1]  # _dt.today()
     metrics["MTD %"] = comp_func(df[df.index >= _dt(today.year, today.month, 1)]) * pct
