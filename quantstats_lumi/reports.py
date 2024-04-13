@@ -169,7 +169,7 @@ def html(
     if isinstance(returns, _pd.Series):
         returns.name = strategy_title
     elif isinstance(returns, _pd.DataFrame):
-        returns.columns = [strategy_title]
+        returns.columns = strategy_title
 
     mtrx = metrics(
         returns=returns,
@@ -1613,7 +1613,7 @@ def _calc_dd(df, display=True, as_pct=False):
 
     if (
         any(ret_dd.columns.get_level_values(0).str.contains("returns"))
-        and ret_dd.columns.get_level_values(0).nunique() > 0
+        and ret_dd.columns.get_level_values(0).nunique() > 1
     ):
         dd_stats = {
             col: {
